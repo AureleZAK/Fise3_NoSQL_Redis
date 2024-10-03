@@ -8,9 +8,9 @@ Projet réalisé dans le cadre du cours NoSQL de Fise3. Il consiste à représen
 
 ## Prérequis
 
-. NodeJS
-. Redis 
-. Module ioredis
+- NodeJS
+- Redis 
+- Module ioredis
 
 ## Installation
 
