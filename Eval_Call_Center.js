@@ -96,7 +96,7 @@ async function affecterAppels() {
     const operatorNames = ["Jean Durand", "Marie Leroy", "Luc Martin", "Sophie Dupont", "Pierre Garnier"];
     for (let operator of operatorNames) {
         // Compter le nombre d'appels en cours pour cet opérateur
-        const appelsOperateur = await redis.lrange(`appels:en_cours:${operator}`, 0, -1);
+        const appelsOperateur = await redis.lrange(`appels:par_opérateur:${operator}`, 0, -1);
         if (appelsOperateur.length >= 2) {
             console.log(`L'opérateur ${operator} a déjà 2 appels en cours. Aucun nouvel appel ne peut être affecté.`);
             continue; // Passer à l'opérateur suivant si la limite est atteinte
@@ -110,7 +110,7 @@ async function affecterAppels() {
             // Affecter l'appel à l'opérateur
             await redis.multi()
                 .lpush("appels:en_cours", callId) // Ajouter l'appel à la liste globale des appels en cours
-                .lpush(`appels:en_cours:${operator}`, callId) // Ajouter l'appel à la liste des appels de l'opérateur
+                .lpush(`appels:par_opérateur:${operator}`, callId) // Ajouter l'appel à la liste des appels de l'opérateur
                 .hset(callId, "statut", "En Cours", "operateur", operator) // Mettre à jour le statut et l'opérateur
                 .exec();
         }
@@ -122,7 +122,7 @@ async function affecterAppels() {
 // Fonction pour affecter un appel non-assigné à un opérateur, limité à 2 appels max par opérateur
 async function affecterAppel(operator) {
     // Compter le nombre d'appels en cours pour cet opérateur
-    const appelsOperateur = await redis.lrange(`appels:en_cours:${operator}`, 0, -1);
+    const appelsOperateur = await redis.lrange(`appels:par_opérateur:${operator}`, 0, -1);
     if (appelsOperateur.length >= 2) {
         console.log(`L'opérateur ${operator} a déjà 2 appels en cours. Aucun nouvel appel ne peut être affecté.`);
         return; // Sortir de la fonction si la limite est atteinte
@@ -136,7 +136,7 @@ async function affecterAppel(operator) {
         // Affecter l'appel à l'opérateur
         await redis.multi()
             .lpush("appels:en_cours", callId) // Ajouter l'appel à la liste globale des appels en cours
-            .lpush(`appels:en_cours:${operator}`, callId) // Ajouter l'appel à la liste des appels de l'opérateur
+            .lpush(`appels:par_opérateur:${operator}`, callId) // Ajouter l'appel à la liste des appels de l'opérateur
             .hset(callId, "statut", "En Cours", "operateur", operator) // Mettre à jour le statut et l'opérateur
             .exec();
     }
@@ -214,13 +214,13 @@ async function finAppel(id, duree) {
     const operateur = callData.operateur; // Récupérer le nom de l'opérateur
     // Supprimer l'appel de la liste des appels en cours
     await redis.lrem("appels:en_cours", 0, callId);
-    await redis.lrem(`appels:en_cours:${operateur}`, 0, callId); // Retirer aussi de la liste des appels de l'opérateur
+    await redis.lrem(`appels:par_opérateur:${operateur}`, 0, callId); // Retirer aussi de la liste des appels de l'opérateur
     // Mettre à jour le statut de l'appel en "Terminé"
     await redis.hset(callId, "statut", "Terminé", "duree", duree);
     // Ajouter l'appel à la liste des appels terminés
     await redis.lpush("appels:termine", callId);
     // Décrementer le nombre d'appels en cours pour cet opérateur
-    const appelsOperateur = await redis.lrange(`appels:en_cours:${operateur}`, 0, -1);
+    const appelsOperateur = await redis.lrange(`appels:par_opérateur:${operateur}`, 0, -1);
     console.log(`L'appel avec l'ID ${callId} a été terminé.`);
 }
 
